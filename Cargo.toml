@@ -24,7 +24,7 @@ features = ["nightly", "batch"]
 [dependencies]
 clear_on_drop = { version = "0.2" }
 #curve25519-dalek = { version = "2", default-features = false }
-curve25519-dalek = { git = "https://github.com/Fiono11/curve25519-dalek.git", rev = "f4310e9" }
+curve25519-dalek = { git = "https://github.com/Fiono11/curve25519-dalek.git", rev = "3d999a2" }
 merlin = { version = "1", default-features = false, optional = true, git = "https://github.com/isislovecruft/merlin", branch = "develop" }
 rand = { version = "0.7", default-features = false, optional = true }
 rand_core = { version = "0.5", default-features = false, optional = true }
