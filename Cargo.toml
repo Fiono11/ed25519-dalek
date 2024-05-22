@@ -25,16 +25,17 @@ rustdoc-args = [
 features = ["batch", "digest", "hazmat", "pem", "serde"]
 
 [dependencies]
-curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false, features = ["digest"] }
+curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false, features = ["digest", "rand_core"] }
 ed25519 = { version = ">=2.2, <2.3", default-features = false }
 signature = { version = ">=2.0, <2.1", optional = true, default-features = false }
 sha2 = { version = "0.10", default-features = false }
 
 # optional features
 merlin = { version = "3", default-features = false, optional = true }
-rand_core = { version = "0.6.4", default-features = false, optional = true }
+rand_core = { version = "0.6.4", default-features = false, optional = true, features = ["getrandom"] }
 serde = { version = "1.0", default-features = false, optional = true }
 zeroize = { version = "1.5", default-features = false, optional = true }
+chacha20poly1305 = { version = "0.10.1", default-features = false, optional = true }
 
 [dev-dependencies]
 curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false, features = ["digest", "rand_core"] }
@@ -58,7 +59,7 @@ required-features = ["rand_core"]
 [features]
 default = ["fast", "std", "zeroize"]
 alloc = ["curve25519-dalek/alloc", "ed25519/alloc", "serde?/alloc", "zeroize/alloc"]
-std = ["alloc", "ed25519/std", "serde?/std", "sha2/std"]
+std = ["alloc", "ed25519/std", "serde?/std", "sha2/std", "chacha20poly1305/std"]
 
 asm = ["sha2/asm"]
 batch = ["alloc", "merlin", "rand_core"]
@@ -73,3 +74,4 @@ pem = ["alloc", "ed25519/pem", "pkcs8"]
 rand_core = ["dep:rand_core"]
 serde = ["dep:serde", "ed25519/serde"]
 zeroize = ["dep:zeroize", "curve25519-dalek/zeroize"]
+olaf = ["merlin", "rand_core", "alloc", "chacha20poly1305"]

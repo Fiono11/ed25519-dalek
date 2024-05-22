@@ -491,6 +491,30 @@ impl SigningKey {
     pub fn to_scalar_bytes(&self) -> [u8; 32] {
         ExpandedSecretKey::from(&self.secret_key).scalar_bytes
     }
+
+    /// Convert this signing key into a Curve25519 scalar. This is computed by clamping and
+    /// reducing the output of [`Self::to_scalar_bytes`].
+    ///
+    /// This can be used anywhere where a Curve25519 scalar is used as a private key, e.g., in
+    /// [`crypto_box`](https://docs.rs/crypto_box/0.9.1/crypto_box/struct.SecretKey.html#impl-From%3CScalar%3E-for-SecretKey).
+    ///
+    /// # Note
+    ///
+    /// We do NOT recommend using a signing/verifying key for encryption. Signing keys are usually
+    /// long-term keys, while keys used for key exchange should rather be ephemeral. If you can
+    /// help it, use a separate key for encryption.
+    ///
+    /// For more information on the security of systems which use the same keys for both signing
+    /// and Diffie-Hellman, see the paper
+    /// [On using the same key pair for Ed25519 and an X25519 based KEM](https://eprint.iacr.org/2021/509).
+    pub fn to_scalar(&self) -> Scalar {
+        // Per the spec, the ed25519 secret key sk is expanded to
+        //     (scalar_bytes, hash_prefix) = SHA-512(sk)
+        // where the two outputs are both 32 bytes. To use for signing, scalar_bytes must be
+        // clamped and reduced (see ExpandedSecretKey::from_bytes). We return the clamped and
+        // reduced form.
+        ExpandedSecretKey::from(&self.secret_key).scalar
+    }
 }
 
 impl AsRef<VerifyingKey> for SigningKey {
