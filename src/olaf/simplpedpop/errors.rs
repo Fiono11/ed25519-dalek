@@ -41,10 +41,6 @@ pub enum SPPError {
     IncorrectNumberOfCoefficientCommitments,
     /// The number of encrypted shares per message must be equal to the number of participants.
     IncorrectNumberOfEncryptedShares,
-    /// Decryption error when decrypting an encrypted secret share.
-    DecryptionError(chacha20poly1305::Error),
-    /// Encryption error when encrypting the secret share.
-    EncryptionError(chacha20poly1305::Error),
     /// Error deserializing an encrypted share
     ErrorDeserializingEncryptedShare,
 }
@@ -53,8 +49,7 @@ pub enum SPPError {
 mod tests {
     use crate::olaf::simplpedpop::errors::SPPError;
     use crate::olaf::simplpedpop::types::{
-        AllMessage, EncryptedSecretShare, Parameters, SecretShare, CHACHA20POLY1305_LENGTH,
-        RECIPIENTS_HASH_LENGTH,
+        AllMessage, EncryptedSecretShare, Parameters, RECIPIENTS_HASH_LENGTH,
     };
     use crate::olaf::{GENERATOR, MINIMUM_THRESHOLD};
     use crate::{SigningKey, VerifyingKey};

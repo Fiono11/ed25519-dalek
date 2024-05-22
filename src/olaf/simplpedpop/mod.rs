@@ -6,8 +6,8 @@ pub use self::types::{AllMessage, Parameters, SPPOutput};
 use self::{
     errors::{SPPError, SPPResult},
     types::{
-        EncryptedSecretShare, MessageContent, PolynomialCommitment, SPPOutputMessage, SecretShare,
-        CHACHA20POLY1305_KEY_LENGTH, ENCRYPTION_NONCE_LENGTH, RECIPIENTS_HASH_LENGTH,
+        MessageContent, PolynomialCommitment, SPPOutputMessage, SecretShare,
+        ENCRYPTION_NONCE_LENGTH, RECIPIENTS_HASH_LENGTH,
     },
 };
 use crate::{olaf::GENERATOR, SigningKey, VerifyingKey};

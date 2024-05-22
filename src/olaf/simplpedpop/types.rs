@@ -9,7 +9,6 @@ use crate::{
     VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH,
 };
 use alloc::vec::Vec;
-use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit, Nonce};
 use core::iter;
 use curve25519_dalek::{edwards::CompressedEdwardsY, traits::Identity, EdwardsPoint, Scalar};
 use ed25519::Signature;
@@ -21,8 +20,6 @@ pub(super) const COMPRESSED_EDWARDS_LENGTH: usize = 32;
 pub(super) const VEC_LENGTH: usize = 2;
 pub(super) const ENCRYPTION_NONCE_LENGTH: usize = 12;
 pub(super) const RECIPIENTS_HASH_LENGTH: usize = 16;
-pub(super) const CHACHA20POLY1305_LENGTH: usize = 48;
-pub(super) const CHACHA20POLY1305_KEY_LENGTH: usize = 32;
 pub(super) const SCALAR_LENGTH: usize = 32;
 pub(super) const U16_LENGTH: usize = 2;
 
