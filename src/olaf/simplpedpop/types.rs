@@ -93,42 +93,56 @@ pub(super) struct SecretShare(pub(super) Scalar);
 impl SecretShare {
     pub(super) fn encrypt(
         &self,
-        key: &[u8; CHACHA20POLY1305_KEY_LENGTH],
-        nonce: &[u8; ENCRYPTION_NONCE_LENGTH],
-    ) -> SPPResult<EncryptedSecretShare> {
-        let cipher = ChaCha20Poly1305::new(&(*key).into());
+        mut transcript: &mut Transcript,
+        i: usize,
+        recipient: &VerifyingKey,
+        encryption_nonce: &[u8],
+        key_exchange: &EdwardsPoint,
+    ) -> EncryptedSecretShare {
+        // We tweak by i too since encrypton_nonce is not truly a nonce.
+        transcript.commit_bytes(b"i", &i.to_le_bytes());
 
-        let nonce = Nonce::from_slice(&nonce[..]);
+        transcript.append_message(b"recipient", &recipient.compressed.to_bytes());
+        transcript.append_message(b"kex", &key_exchange.compress().to_bytes());
 
-        let ciphertext: Vec<u8> = cipher
-            .encrypt(nonce, &self.0.to_bytes()[..])
-            .map_err(SPPError::EncryptionError)?;
+        // Afaik redundant for merlin, but attacks get better.
+        transcript.commit_bytes(b"nonce", encryption_nonce);
 
-        Ok(EncryptedSecretShare(ciphertext))
+        let mut buf = [0; 64];
+        transcript.challenge_bytes(b"encryption scalar", &mut buf);
+        let scalar = Scalar::from_bytes_mod_order_wide(&buf);
+
+        // As this is encryption, we require similar security properties
+        // as from witness_bytes here, but without randomness, and
+        // challenge_scalar is imeplemented close enough.
+        EncryptedSecretShare(self.0 + scalar)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EncryptedSecretShare(pub(super) Vec<u8>);
+pub struct EncryptedSecretShare(pub(super) Scalar);
 
 impl EncryptedSecretShare {
     pub(super) fn decrypt(
         &self,
-        key: &[u8; CHACHA20POLY1305_KEY_LENGTH],
-        nonce: &[u8; ENCRYPTION_NONCE_LENGTH],
-    ) -> SPPResult<SecretShare> {
-        let cipher = ChaCha20Poly1305::new(&(*key).into());
+        mut transcript: &mut Transcript,
+        i: usize,
+        recipient: &VerifyingKey,
+        encryption_nonce: &[u8],
+        key_exchange: &EdwardsPoint,
+    ) -> SecretShare {
+        transcript.commit_bytes(b"i", &i.to_le_bytes());
 
-        let nonce = Nonce::from_slice(&nonce[..]);
+        transcript.append_message(b"recipient", &recipient.compressed.to_bytes());
+        transcript.append_message(b"kex", &key_exchange.compress().to_bytes());
 
-        let plaintext = cipher
-            .decrypt(nonce, &self.0[..])
-            .map_err(SPPError::DecryptionError)?;
+        transcript.commit_bytes(b"nonce", &encryption_nonce);
 
-        let mut bytes = [0; 32];
-        bytes.copy_from_slice(&plaintext);
+        let mut buf = [0; 64];
+        transcript.challenge_bytes(b"encryption scalar", &mut buf);
+        let scalar = Scalar::from_bytes_mod_order_wide(&buf);
 
-        Ok(SecretShare(Scalar::from_bytes_mod_order(bytes)))
+        SecretShare(self.0 - scalar)
     }
 }
 
@@ -311,7 +325,7 @@ impl MessageContent {
         }
 
         for ciphertext in &self.encrypted_secret_shares {
-            bytes.extend(ciphertext.0.clone());
+            bytes.extend(ciphertext.0.as_bytes());
         }
 
         bytes
@@ -368,9 +382,12 @@ impl MessageContent {
         let mut encrypted_secret_shares = Vec::new();
 
         for _ in 0..participants {
-            let ciphertext = bytes[cursor..cursor + CHACHA20POLY1305_LENGTH].to_vec();
-            encrypted_secret_shares.push(EncryptedSecretShare(ciphertext));
-            cursor += CHACHA20POLY1305_LENGTH;
+            let mut scalar_bytes = [0; SCALAR_LENGTH];
+            scalar_bytes.copy_from_slice(&bytes[cursor..cursor + SCALAR_LENGTH]);
+            let scalar = scalar_from_canonical_bytes(scalar_bytes)
+                .ok_or(SPPError::ErrorDeserializingEncryptedShare)?;
+            encrypted_secret_shares.push(EncryptedSecretShare(scalar));
+            cursor += SCALAR_LENGTH;
         }
 
         Ok(MessageContent {
@@ -595,23 +612,48 @@ mod tests {
     }
 
     #[test]
-    fn test_encryption_decryption() {
+    fn test_encryption_and_decryption() {
         let mut rng = OsRng;
-        let ephemeral_key = SigningKey::generate(&mut rng);
-        let recipient = SigningKey::generate(&mut rng);
-        let encryption_nonce = [1; ENCRYPTION_NONCE_LENGTH];
-        let key_exchange = ephemeral_key.to_scalar() * recipient.verifying_key.point;
-        let secret_share = SecretShare(Scalar::random(&mut rng));
-        let mut transcript = Transcript::new(b"encryption");
-        transcript.append_message(b"key", &key_exchange.compress().as_bytes()[..]);
-        let mut key_bytes = [0; CHACHA20POLY1305_KEY_LENGTH];
-        transcript.challenge_bytes(b"key", &mut key_bytes);
 
-        let encrypted_share = secret_share.encrypt(&key_bytes, &encryption_nonce).unwrap();
+        // Generate a random secret
+        let secret_scalar = Scalar::random(&mut rng);
+        let secret_share = SecretShare(secret_scalar);
 
-        encrypted_share
-            .decrypt(&key_bytes, &encryption_nonce)
-            .unwrap();
+        // Generate a random recipient verifying key
+        let recipient_point = Scalar::random(&mut rng) * GENERATOR;
+        let recipient_key = VerifyingKey::from(recipient_point);
+
+        // Generate a random key exchange point
+        let key_exchange = Scalar::random(&mut rng) * GENERATOR;
+
+        // Generate a random nonce
+        let mut encryption_nonce = [0u8; ENCRYPTION_NONCE_LENGTH];
+        rng.fill_bytes(&mut encryption_nonce);
+
+        // Create a transcript
+        let mut transcript = Transcript::new(b"Test Transcript");
+
+        // Encrypt the secret share
+        let encrypted_share = secret_share.encrypt(
+            &mut transcript,
+            1,
+            &recipient_key,
+            &encryption_nonce,
+            &key_exchange,
+        );
+
+        let mut transcript = Transcript::new(b"Test Transcript");
+
+        // Decrypt the secret share
+        let decrypted_share = encrypted_share.decrypt(
+            &mut transcript,
+            1,
+            &recipient_key,
+            &encryption_nonce,
+            &key_exchange,
+        );
+
+        assert_eq!(decrypted_share.0, secret_share.0);
     }
 
     #[test]

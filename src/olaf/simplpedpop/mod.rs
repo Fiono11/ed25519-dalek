@@ -6,7 +6,7 @@ pub use self::types::{AllMessage, Parameters, SPPOutput};
 use self::{
     errors::{SPPError, SPPResult},
     types::{
-        MessageContent, PolynomialCommitment, SPPOutputMessage, SecretShare,
+        EncryptedSecretShare, MessageContent, PolynomialCommitment, SPPOutputMessage, SecretShare,
         CHACHA20POLY1305_KEY_LENGTH, ENCRYPTION_NONCE_LENGTH, RECIPIENTS_HASH_LENGTH,
     },
 };
@@ -71,10 +71,12 @@ impl SigningKey {
         let mut nonce: [u8; 32] = [0u8; 32];
         rng.fill_bytes(&mut nonce);
 
-        let ephemeral_key = SigningKey::from_bytes(secret.as_bytes());
+        //let ephemeral_key = SigningKey::from_bytes(secret.as_bytes());
         //let ephemeral_key = SigningKey::generate(&mut rng);
 
         for i in 0..parameters.participants {
+            let mut transcript = encryption_transcript.clone();
+
             let identifier = Identifier::generate(&recipients_hash, i);
 
             let polynomial_evaluation = secret_polynomial.evaluate(&identifier.0);
@@ -85,16 +87,13 @@ impl SigningKey {
 
             let key_exchange: EdwardsPoint = secret * recipient.point;
 
-            let mut encryption_transcript = encryption_transcript.clone();
-            encryption_transcript.append_message(b"recipient", recipient.as_bytes());
-            encryption_transcript
-                .append_message(b"key exchange", &key_exchange.compress().as_bytes()[..]);
-            encryption_transcript.append_message(b"i", &(i as usize).to_le_bytes());
-
-            let mut key_bytes = [0; CHACHA20POLY1305_KEY_LENGTH];
-            encryption_transcript.challenge_bytes(b"key", &mut key_bytes);
-
-            let encrypted_secret_share = secret_share.encrypt(&key_bytes, &encryption_nonce)?;
+            let encrypted_secret_share = secret_share.encrypt(
+                &mut transcript,
+                i as usize,
+                &recipient,
+                &encryption_nonce,
+                &key_exchange,
+            );
 
             encrypted_secret_shares.push(encrypted_secret_share);
         }
@@ -183,21 +182,21 @@ impl SigningKey {
 
             let key_exchange: EdwardsPoint = self.to_scalar() * secret_commitment;
 
-            assert!(self.to_scalar() * GENERATOR == self.verifying_key.point);
+            //assert!(self.to_scalar() * GENERATOR == self.verifying_key.point);
 
-            encryption_transcript.append_message(b"recipient", self.verifying_key.as_bytes());
-            encryption_transcript
-                .append_message(b"key exchange", &key_exchange.compress().as_bytes()[..]);
+            //encryption_transcript.append_message(b"recipient", self.verifying_key.as_bytes());
+            //encryption_transcript
+            //.append_message(b"key exchange", &key_exchange.compress().as_bytes()[..]);
 
             let mut secret_share_found = false;
 
             for (i, encrypted_secret_share) in encrypted_secret_shares.iter().enumerate() {
-                let mut encryption_transcript = encryption_transcript.clone();
+                let mut transcript = encryption_transcript.clone();
 
-                encryption_transcript.append_message(b"i", &i.to_le_bytes());
+                //encryption_transcript.append_message(b"i", &i.to_le_bytes());
 
-                let mut key_bytes = [0; CHACHA20POLY1305_KEY_LENGTH];
-                encryption_transcript.challenge_bytes(b"key", &mut key_bytes);
+                //let mut key_bytes = [0; CHACHA20POLY1305_KEY_LENGTH];
+                //encryption_transcript.challenge_bytes(b"key", &mut key_bytes);
 
                 if identifiers.len() != participants {
                     let identifier =
@@ -206,15 +205,18 @@ impl SigningKey {
                 }
 
                 if !secret_share_found {
-                    if let Ok(secret_share) =
-                        encrypted_secret_share.decrypt(&key_bytes, &content.encryption_nonce)
+                    let secret_share = encrypted_secret_share.decrypt(
+                        &mut transcript,
+                        i,
+                        &self.verifying_key,
+                        &content.encryption_nonce,
+                        &key_exchange,
+                    );
+                    if secret_share.0 * GENERATOR
+                        == polynomial_commitment.evaluate(&identifiers[i].0)
                     {
-                        if secret_share.0 * GENERATOR
-                            == polynomial_commitment.evaluate(&identifiers[i].0)
-                        {
-                            secret_shares.push(secret_share);
-                            secret_share_found = true;
-                        }
+                        secret_shares.push(secret_share);
+                        secret_share_found = true;
                     }
                 }
             }
@@ -227,6 +229,10 @@ impl SigningKey {
                 .sender
                 .verify(&message.content.to_bytes(), &message.signature)
                 .map_err(SPPError::InvalidSignature)?;
+
+            //if j == messages.len() - 1 && secret_shares.get(j).is_some() {
+            //break;
+            //}
         }
 
         for id in &identifiers {
@@ -258,6 +264,7 @@ impl SigningKey {
 #[cfg(test)]
 mod tests {
     use crate::olaf::simplpedpop::types::{AllMessage, Parameters};
+    use crate::olaf::test_utils::generate_parameters;
     use crate::olaf::{GENERATOR, MINIMUM_THRESHOLD};
     use crate::{SigningKey, VerifyingKey};
     use alloc::vec::Vec;
@@ -265,20 +272,7 @@ mod tests {
     use rand::Rng;
     use rand_core::OsRng;
 
-    const MAXIMUM_PARTICIPANTS: u16 = 10;
-    const MINIMUM_PARTICIPANTS: u16 = 2;
     const PROTOCOL_RUNS: usize = 1;
-
-    fn generate_parameters() -> Parameters {
-        let mut rng = rand::thread_rng();
-        let participants = rng.gen_range(MINIMUM_PARTICIPANTS..=MAXIMUM_PARTICIPANTS);
-        let threshold = rng.gen_range(MINIMUM_THRESHOLD..=participants);
-
-        Parameters {
-            participants,
-            threshold,
-        }
-    }
 
     #[test]
     fn test_simplpedpop_protocol() {

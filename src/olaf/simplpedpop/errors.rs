@@ -45,13 +45,15 @@ pub enum SPPError {
     DecryptionError(chacha20poly1305::Error),
     /// Encryption error when encrypting the secret share.
     EncryptionError(chacha20poly1305::Error),
+    /// Error deserializing an encrypted share
+    ErrorDeserializingEncryptedShare,
 }
 
 #[cfg(test)]
 mod tests {
     use crate::olaf::simplpedpop::errors::SPPError;
     use crate::olaf::simplpedpop::types::{
-        AllMessage, EncryptedSecretShare, Parameters, CHACHA20POLY1305_LENGTH,
+        AllMessage, EncryptedSecretShare, Parameters, SecretShare, CHACHA20POLY1305_LENGTH,
         RECIPIENTS_HASH_LENGTH,
     };
     use crate::olaf::{GENERATOR, MINIMUM_THRESHOLD};
@@ -292,7 +294,7 @@ mod tests {
             .collect();
 
         messages[1].content.encrypted_secret_shares[0] =
-            EncryptedSecretShare(vec![1; CHACHA20POLY1305_LENGTH]);
+            EncryptedSecretShare(Scalar::random(&mut rng));
 
         let result = keypairs[0].simplpedpop_recipient_all(&messages);
 

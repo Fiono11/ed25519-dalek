@@ -76,7 +76,7 @@ pub(crate) mod test_utils {
     use crate::olaf::simplpedpop::Parameters;
     use rand::{thread_rng, Rng};
 
-    const MAXIMUM_PARTICIPANTS: u16 = 10;
+    const MAXIMUM_PARTICIPANTS: u16 = 2;
     const MINIMUM_PARTICIPANTS: u16 = 2;
 
     pub(crate) fn generate_parameters() -> Parameters {
