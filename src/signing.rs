@@ -34,7 +34,7 @@ use crate::context::Context;
 use signature::DigestSigner;
 
 #[cfg(feature = "zeroize")]
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroize;
 
 use crate::{
     constants::{KEYPAIR_LENGTH, SECRET_KEY_LENGTH},
@@ -610,12 +610,16 @@ impl TryFrom<&[u8]> for SigningKey {
 #[cfg(feature = "zeroize")]
 impl Drop for SigningKey {
     fn drop(&mut self) {
-        self.secret_key.zeroize();
+        self.zeroize()
     }
 }
 
 #[cfg(feature = "zeroize")]
-impl ZeroizeOnDrop for SigningKey {}
+impl Zeroize for SigningKey {
+    fn zeroize(&mut self) {
+        self.secret_key.zeroize();
+    }
+}
 
 #[cfg(all(feature = "alloc", feature = "pkcs8"))]
 impl pkcs8::EncodePrivateKey for SigningKey {

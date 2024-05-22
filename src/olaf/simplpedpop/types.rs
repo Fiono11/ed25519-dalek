@@ -14,7 +14,7 @@ use curve25519_dalek::{edwards::CompressedEdwardsY, traits::Identity, EdwardsPoi
 use ed25519::Signature;
 use merlin::Transcript;
 use rand_core::{CryptoRng, RngCore};
-use zeroize::ZeroizeOnDrop;
+use zeroize::Zeroize;
 
 pub(super) const COMPRESSED_EDWARDS_LENGTH: usize = 32;
 pub(super) const VEC_LENGTH: usize = 2;
@@ -84,8 +84,14 @@ impl Parameters {
     }
 }
 
-#[derive(ZeroizeOnDrop)]
+#[derive(Zeroize)]
 pub(super) struct SecretShare(pub(super) Scalar);
+
+impl Drop for SecretShare {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
+}
 
 impl SecretShare {
     pub(super) fn encrypt(
@@ -144,9 +150,15 @@ impl EncryptedSecretShare {
 }
 
 /// The secret polynomial of a participant chosen at randoma nd used to generate the secret shares of all the participants (including itself).
-#[derive(ZeroizeOnDrop)]
+#[derive(Zeroize)]
 pub(crate) struct SecretPolynomial {
     pub(super) coefficients: Vec<Scalar>,
+}
+
+impl Drop for SecretPolynomial {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
 }
 
 impl SecretPolynomial {

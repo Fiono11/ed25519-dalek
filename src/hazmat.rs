@@ -18,7 +18,7 @@ use crate::{InternalError, SignatureError};
 use curve25519_dalek::scalar::{clamp_integer, Scalar};
 
 #[cfg(feature = "zeroize")]
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroize;
 
 // These are used in the functions that are made public when the hazmat feature is set
 use crate::{Signature, VerifyingKey};
@@ -48,13 +48,17 @@ pub struct ExpandedSecretKey {
 #[cfg(feature = "zeroize")]
 impl Drop for ExpandedSecretKey {
     fn drop(&mut self) {
-        self.scalar.zeroize();
-        self.hash_prefix.zeroize()
+        self.zeroize()
     }
 }
 
 #[cfg(feature = "zeroize")]
-impl ZeroizeOnDrop for ExpandedSecretKey {}
+impl Zeroize for ExpandedSecretKey {
+    fn zeroize(&mut self) {
+        self.scalar.zeroize();
+        self.hash_prefix.zeroize()
+    }
+}
 
 // Some conversion methods for `ExpandedSecretKey`. The signing methods are defined in
 // `signing.rs`, since we need them even when `not(feature = "hazmat")`

@@ -19,7 +19,7 @@ use curve25519_dalek::{
 };
 use merlin::Transcript;
 use rand_core::{CryptoRng, RngCore};
-use zeroize::ZeroizeOnDrop;
+use zeroize::Zeroize;
 
 /// A participant's signature share, which the coordinator will aggregate with all other signer's
 /// shares into the joint signature.
@@ -145,8 +145,14 @@ impl BindingFactorList {
 }
 
 /// A scalar that is a signing nonce.
-#[derive(Debug, Clone, ZeroizeOnDrop, PartialEq, Eq)]
+#[derive(Debug, Clone, Zeroize, PartialEq, Eq)]
 pub(super) struct Nonce(pub(super) Scalar);
+
+impl Drop for Nonce {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
+}
 
 impl Nonce {
     /// Generates a new uniformly random signing nonce by sourcing fresh randomness and combining
@@ -227,7 +233,7 @@ impl From<&Nonce> for NonceCommitment {
 /// Note that [`SigningNonces`] must be used *only once* for a signing
 /// operation; re-using nonces will result in leakage of a signer's long-lived
 /// signing key.
-#[derive(Debug, Clone, ZeroizeOnDrop, PartialEq, Eq)]
+#[derive(Debug, Clone, Zeroize, PartialEq, Eq)]
 pub struct SigningNonces {
     pub(super) hiding: Nonce,
     pub(super) binding: Nonce,
@@ -237,6 +243,12 @@ pub struct SigningNonces {
     // by the Coordinator, and this prevents having to recompute them.
     #[zeroize(skip)]
     pub(super) commitments: SigningCommitments,
+}
+
+impl Drop for SigningNonces {
+    fn drop(&mut self) {
+        self.zeroize()
+    }
 }
 
 impl SigningNonces {
