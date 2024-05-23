@@ -293,7 +293,7 @@ pub use ed25519::Signature;
 pub use ed25519::pkcs8;
 
 #[cfg(feature = "olaf")]
-mod olaf;
+pub mod olaf;
 
 #[cfg(feature = "olaf")]
 extern crate alloc;
