@@ -17,7 +17,7 @@ pub(super) const COMPRESSED_EDWARDS_LENGTH: usize = 32;
 
 /// The threshold public key generated in the SimplPedPoP protocol, used to validate the threshold signatures of the FROST protocol.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct ThresholdPublicKey(pub(crate) VerifyingKey);
+pub struct ThresholdPublicKey(pub VerifyingKey);
 
 /// The verifying share of a participant generated in the SimplPedPoP protocol, used to verify its signatures shares in the FROST protocol.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
