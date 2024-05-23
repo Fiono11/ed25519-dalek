@@ -414,6 +414,7 @@ impl MessageContent {
 #[derive(Debug, PartialEq, Eq)]
 pub struct SPPOutputMessage {
     pub(super) sender: VerifyingKey,
+    /// The output of the SimplPedPoP protocol.
     pub spp_output: SPPOutput,
     pub(super) signature: Signature,
 }
@@ -476,7 +477,7 @@ impl SPPOutputMessage {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SPPOutput {
     pub(crate) parameters: Parameters,
-    /// The threshold public key
+    /// The threshold public key.
     pub threshold_public_key: ThresholdPublicKey,
     pub(crate) verifying_keys: Vec<(Identifier, VerifyingShare)>,
 }

@@ -2,12 +2,12 @@ pub mod errors;
 mod types;
 
 pub(crate) use self::types::SecretPolynomial;
-pub use self::types::{AllMessage, Parameters, SPPOutput};
+pub use self::types::{AllMessage, Parameters, SPPOutput, SPPOutputMessage};
 use self::{
     errors::{SPPError, SPPResult},
     types::{
-        MessageContent, PolynomialCommitment, SPPOutputMessage, SecretShare,
-        ENCRYPTION_NONCE_LENGTH, RECIPIENTS_HASH_LENGTH,
+        MessageContent, PolynomialCommitment, SecretShare, ENCRYPTION_NONCE_LENGTH,
+        RECIPIENTS_HASH_LENGTH,
     },
 };
 use crate::{olaf::GENERATOR, SigningKey, VerifyingKey};

@@ -5,11 +5,11 @@
 mod errors;
 mod types;
 
+pub use self::types::{SigningCommitments, SigningNonces, SigningPackage};
 use self::{
     errors::{FROSTError, FROSTResult},
     types::{
         BindingFactor, BindingFactorList, CommonData, GroupCommitment, SignatureShare, SignerData,
-        SigningCommitments, SigningNonces, SigningPackage,
     },
 };
 use super::{
