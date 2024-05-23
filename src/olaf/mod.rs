@@ -6,7 +6,7 @@ pub mod frost;
 /// Implementation of the SimplPedPoP protocol.
 pub mod simplpedpop;
 
-use crate::{SignatureError, SigningKey, VerifyingKey, KEYPAIR_LENGTH};
+use crate::{SignatureError, SigningKey, VerifyingKey, KEYPAIR_LENGTH, SECRET_KEY_LENGTH};
 use curve25519_dalek::{constants::ED25519_BASEPOINT_POINT, EdwardsPoint, Scalar};
 use merlin::Transcript;
 
@@ -24,7 +24,7 @@ pub struct ThresholdPublicKey(pub(crate) VerifyingKey);
 pub struct VerifyingShare(pub(crate) VerifyingKey);
 
 /// The signing keypair of a participant generated in the SimplPedPoP protocol, used to produce its signatures shares in the FROST protocol.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SigningKeypair(pub(crate) SigningKey);
 
 impl SigningKeypair {
@@ -34,12 +34,21 @@ impl SigningKeypair {
     }
 
     /// Deserializes a `SigningKeypair` from bytes.
-    pub fn from_bytes(bytes: &[u8]) -> Result<SigningKeypair, SignatureError> {
-        let mut keypair_bytes = [0; 64];
-        keypair_bytes.copy_from_slice(bytes);
+    pub fn from_bytes(bytes: &[u8; KEYPAIR_LENGTH]) -> Result<SigningKeypair, SignatureError> {
+        let mut secret_key = [0; SECRET_KEY_LENGTH];
+        secret_key.copy_from_slice(&bytes[..SECRET_KEY_LENGTH]);
 
-        let keypair = SigningKey::from_keypair_bytes(&keypair_bytes)?;
-        Ok(SigningKeypair(keypair))
+        let mut verifying_key_bytes = [0; SECRET_KEY_LENGTH];
+        verifying_key_bytes.copy_from_slice(&bytes[SECRET_KEY_LENGTH..]);
+
+        let verifying_key = VerifyingKey::from_bytes(&verifying_key_bytes)?;
+
+        let signing_key = SigningKey {
+            secret_key,
+            verifying_key,
+        };
+
+        Ok(SigningKeypair(signing_key))
     }
 }
 
@@ -73,15 +82,18 @@ pub(crate) fn scalar_from_canonical_bytes(bytes: [u8; 32]) -> Option<Scalar> {
 
 #[cfg(test)]
 pub(crate) mod test_utils {
-    use crate::olaf::simplpedpop::Parameters;
+    use super::MINIMUM_THRESHOLD;
+    use crate::{
+        olaf::{simplpedpop::Parameters, SigningKeypair},
+        SigningKey,
+    };
+    use ed25519::signature::Keypair;
     use rand::{thread_rng, Rng};
 
     const MAXIMUM_PARTICIPANTS: u16 = 2;
     const MINIMUM_PARTICIPANTS: u16 = 2;
 
     pub(crate) fn generate_parameters() -> Parameters {
-        use super::MINIMUM_THRESHOLD;
-
         let mut rng = thread_rng();
         let participants = rng.gen_range(MINIMUM_PARTICIPANTS..=MAXIMUM_PARTICIPANTS);
         let threshold = rng.gen_range(MINIMUM_THRESHOLD..=participants);
@@ -90,5 +102,16 @@ pub(crate) mod test_utils {
             participants,
             threshold,
         }
+    }
+
+    #[test]
+    fn test_signing_keypair_serialization() {
+        let mut rng = thread_rng();
+        let keypair = SigningKeypair(SigningKey::generate(&mut rng));
+
+        let bytes = keypair.to_bytes();
+        let deserialized_keypair = SigningKeypair::from_bytes(&bytes).unwrap();
+
+        assert_eq!(keypair, deserialized_keypair);
     }
 }

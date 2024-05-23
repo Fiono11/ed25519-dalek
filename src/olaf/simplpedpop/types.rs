@@ -476,8 +476,9 @@ impl SPPOutputMessage {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SPPOutput {
     pub(crate) parameters: Parameters,
+    /// The threshold public key
     pub threshold_public_key: ThresholdPublicKey,
-    pub verifying_keys: Vec<(Identifier, VerifyingShare)>,
+    pub(crate) verifying_keys: Vec<(Identifier, VerifyingShare)>,
 }
 
 impl SPPOutput {
