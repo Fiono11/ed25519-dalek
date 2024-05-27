@@ -192,7 +192,7 @@ impl SecretPolynomial {
 }
 
 /// The polynomial commitment of a participant, used to verify the secret shares without revealing the polynomial.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PolynomialCommitment {
     pub(super) coefficients_commitments: Vec<EdwardsPoint>,
 }
@@ -253,7 +253,7 @@ impl PolynomialCommitment {
 /// We'd save bandwidth by having separate messages for each
 /// participant, but typical thresholds lie between 1/2 and 2/3,
 /// so this doubles or tripples bandwidth usage.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AllMessage {
     pub(super) content: MessageContent,
     pub(super) signature: Signature,
@@ -291,7 +291,7 @@ impl AllMessage {
 }
 
 /// The contents of the message destined to all participants.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MessageContent {
     pub(super) sender: VerifyingKey,
     pub(super) encryption_nonce: [u8; ENCRYPTION_NONCE_LENGTH],
@@ -411,7 +411,7 @@ impl MessageContent {
 }
 
 /// The signed output of the SimplPedPoP protocol.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct SPPOutputMessage {
     pub(super) sender: VerifyingKey,
     /// The output of the SimplPedPoP protocol.
