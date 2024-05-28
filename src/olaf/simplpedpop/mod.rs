@@ -12,7 +12,7 @@ use self::{
         RECIPIENTS_HASH_LENGTH,
     },
 };
-use crate::{olaf::GENERATOR, scalar_from_canonical_bytes, SigningKey, VerifyingKey};
+use crate::{olaf::GENERATOR, SigningKey, VerifyingKey};
 use alloc::vec::Vec;
 use curve25519_dalek::{traits::Identity, EdwardsPoint, Scalar};
 use ed25519::signature::{SignerMut, Verifier};
@@ -287,8 +287,14 @@ mod tests {
                 .map(|_| SigningKey::generate(&mut OsRng))
                 .collect();
 
-            let public_keys: Vec<VerifyingKey> =
-                keypairs.iter().map(|kp| kp.verifying_key).collect();
+            let mut recipients_keypairs: Vec<SigningKey> = (0..participants)
+                .map(|_| SigningKey::generate(&mut OsRng))
+                .collect();
+
+            let public_keys: Vec<VerifyingKey> = recipients_keypairs
+                .iter()
+                .map(|kp| kp.verifying_key)
+                .collect();
 
             let mut all_messages = Vec::new();
             for i in 0..participants {
@@ -300,7 +306,7 @@ mod tests {
 
             let mut spp_outputs = Vec::new();
 
-            for kp in keypairs.iter_mut() {
+            for kp in recipients_keypairs.iter_mut() {
                 let spp_output = kp.simplpedpop_recipient_all(&all_messages).unwrap();
                 spp_outputs.push(spp_output);
             }

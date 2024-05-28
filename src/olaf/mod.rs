@@ -21,11 +21,11 @@ pub struct ThresholdPublicKey(pub VerifyingKey);
 
 /// The verifying share of a participant generated in the SimplPedPoP protocol, used to verify its signatures shares in the FROST protocol.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct VerifyingShare(pub(crate) VerifyingKey);
+pub struct VerifyingShare(pub VerifyingKey);
 
 /// The signing keypair of a participant generated in the SimplPedPoP protocol, used to produce its signatures shares in the FROST protocol.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SigningKeypair(pub(crate) SigningKey);
+pub struct SigningKeypair(pub SigningKey);
 
 impl SigningKeypair {
     /// Serializes `SigningKeypair` to bytes.
