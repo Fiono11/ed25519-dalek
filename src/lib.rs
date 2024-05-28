@@ -252,6 +252,7 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
+use curve25519_dalek::Scalar;
 pub use ed25519;
 
 #[cfg(feature = "batch")]
@@ -297,3 +298,14 @@ pub mod olaf;
 
 #[cfg(feature = "olaf")]
 extern crate alloc;
+
+pub(crate) fn scalar_from_canonical_bytes(bytes: [u8; 32]) -> Option<Scalar> {
+    let key = Scalar::from_canonical_bytes(bytes);
+
+    // Note: this is a `CtOption` so we have to do this to extract the value.
+    if bool::from(key.is_none()) {
+        return None;
+    }
+
+    Some(key.unwrap())
+}

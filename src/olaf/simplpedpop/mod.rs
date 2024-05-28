@@ -1,6 +1,8 @@
 pub mod errors;
 mod types;
 
+use std::io::Read;
+
 pub(crate) use self::types::SecretPolynomial;
 pub use self::types::{AllMessage, Parameters, SPPOutput, SPPOutputMessage};
 use self::{
@@ -10,7 +12,7 @@ use self::{
         RECIPIENTS_HASH_LENGTH,
     },
 };
-use crate::{olaf::GENERATOR, SigningKey, VerifyingKey};
+use crate::{olaf::GENERATOR, scalar_from_canonical_bytes, SigningKey, VerifyingKey};
 use alloc::vec::Vec;
 use curve25519_dalek::{traits::Identity, EdwardsPoint, Scalar};
 use ed25519::signature::{SignerMut, Verifier};
@@ -71,8 +73,7 @@ impl SigningKey {
         let mut nonce: [u8; 32] = [0u8; 32];
         rng.fill_bytes(&mut nonce);
 
-        //let ephemeral_key = SigningKey::from_bytes(secret.as_bytes());
-        //let ephemeral_key = SigningKey::generate(&mut rng);
+        let ephemeral_key = SigningKey::generate(&mut rng);
 
         for i in 0..parameters.participants {
             let mut transcript = encryption_transcript.clone();
@@ -83,9 +84,9 @@ impl SigningKey {
 
             let secret_share = SecretShare(polynomial_evaluation);
 
-            let recipient = recipients[i as usize];
+            let recipient: VerifyingKey = recipients[i as usize];
 
-            let key_exchange: EdwardsPoint = secret * recipient.point;
+            let key_exchange = ephemeral_key.to_scalar() * recipient.point;
 
             let encrypted_secret_share = secret_share.encrypt(
                 &mut transcript,
@@ -105,6 +106,7 @@ impl SigningKey {
             recipients_hash,
             polynomial_commitment,
             encrypted_secret_shares,
+            ephemeral_key.verifying_key,
         );
 
         let signature = self.sign(&message_content.to_bytes());
@@ -180,7 +182,7 @@ impl SigningKey {
                 &polynomial_commitment,
             ]);
 
-            let key_exchange: EdwardsPoint = self.to_scalar() * secret_commitment;
+            let key_exchange: EdwardsPoint = self.to_scalar() * message.content.ephemeral_key.point;
 
             //assert!(self.to_scalar() * GENERATOR == self.verifying_key.point);
 

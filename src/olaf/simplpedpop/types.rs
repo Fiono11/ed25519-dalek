@@ -299,6 +299,7 @@ pub struct MessageContent {
     pub(super) recipients_hash: [u8; RECIPIENTS_HASH_LENGTH],
     pub(super) polynomial_commitment: PolynomialCommitment,
     pub(super) encrypted_secret_shares: Vec<EncryptedSecretShare>,
+    pub(super) ephemeral_key: VerifyingKey,
 }
 
 impl MessageContent {
@@ -310,6 +311,7 @@ impl MessageContent {
         recipients_hash: [u8; RECIPIENTS_HASH_LENGTH],
         polynomial_commitment: PolynomialCommitment,
         encrypted_secret_shares: Vec<EncryptedSecretShare>,
+        ephemeral_key: VerifyingKey,
     ) -> Self {
         Self {
             sender,
@@ -318,6 +320,7 @@ impl MessageContent {
             recipients_hash,
             polynomial_commitment,
             encrypted_secret_shares,
+            ephemeral_key,
         }
     }
     /// Serialize MessageContent
@@ -336,6 +339,8 @@ impl MessageContent {
         for ciphertext in &self.encrypted_secret_shares {
             bytes.extend(ciphertext.0.as_bytes());
         }
+
+        bytes.extend(&self.ephemeral_key.to_bytes());
 
         bytes
     }
@@ -399,6 +404,13 @@ impl MessageContent {
             cursor += SCALAR_LENGTH;
         }
 
+        let mut ephemeral_key_bytes = [0; PUBLIC_KEY_LENGTH];
+        ephemeral_key_bytes.copy_from_slice(&bytes[cursor..cursor + PUBLIC_KEY_LENGTH]);
+
+        let ephemeral_key =
+            VerifyingKey::from_bytes(&ephemeral_key_bytes).map_err(SPPError::InvalidPublicKey)?;
+        cursor += PUBLIC_KEY_LENGTH;
+
         Ok(MessageContent {
             sender,
             encryption_nonce,
@@ -406,6 +418,7 @@ impl MessageContent {
             recipients_hash,
             polynomial_commitment,
             encrypted_secret_shares,
+            ephemeral_key,
         })
     }
 }
