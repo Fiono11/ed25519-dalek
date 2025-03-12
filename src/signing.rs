@@ -59,7 +59,7 @@ pub type SecretKey = [u8; SECRET_KEY_LENGTH];
 #[derive(Clone, Debug)]
 pub struct SigningKey {
     /// The secret half of this signing key.
-    pub(crate) secret_key: SecretKey,
+    pub secret_key: SecretKey,
     /// The public half of this signing key.
     pub(crate) verifying_key: VerifyingKey,
 }
